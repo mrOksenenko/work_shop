@@ -1,0 +1,16 @@
+{
+  "name": "oks-desk",
+  "productName": "OKS Desk",
+  "version": "0.1.0",
+  "description": "OKS Desk — десктопный интерфейс для Claude Code CLI",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node scripts/brand.js && electron ."
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dompurify": "^3.4.18",
+    "electron": "^45.4.1",
+    "marked": "^18.2.1"
+  }
+}

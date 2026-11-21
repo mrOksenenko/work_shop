@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OKS Desk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div id="brand"><span>OKS Desk</span></div>
+    <button id="newBtn" class="chip">＋ Новый чат</button>
+    <div id="chatList"></div>
+  </aside>
+  <div id="main">
+  <header id="topbar">
+    <button id="folderBtn" class="chip" title="Рабочая папка">📁 <span id="folderName">…</span></button>
+    <div class="spacer"></div>
+    <select id="modeSel" title="Режим разрешений">
+      <option value="default">Спрашивать (запрещает правки)</option>
+      <option value="acceptEdits">Авто-правки файлов</option>
+      <option value="plan">План (только чтение)</option>
+      <option value="bypassPermissions">Без ограничений ⚠</option>
+    </select>
+    <select id="modelSel" title="Модель">
+      <option value="">Модель по умолчанию</option>
+      <option value="opus">Opus</option>
+      <option value="sonnet">Sonnet</option>
+      <option value="haiku">Haiku</option>
+    </select>
+  </header>
+
+  <main id="messages">
+    <div id="empty">
+      <h1>Чем займёмся?</h1>
+      <p id="emptyHint"></p>
+    </div>
+  </main>
+
+  <footer id="composer">
+    <div id="box">
+      <textarea id="input" rows="1" placeholder="Напишите сообщение… (Enter — отправить, Shift+Enter — новая строка)"></textarea>
+      <button id="sendBtn" title="Отправить">↑</button>
+      <button id="stopBtn" title="Остановить" hidden>■</button>
+    </div>
+    <div id="status"></div>
+  </footer>
+  </div>
+
+  <script src="../../node_modules/marked/lib/marked.umd.js"></script>
+  <script src="../../node_modules/dompurify/dist/purify.min.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
