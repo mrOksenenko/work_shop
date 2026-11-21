@@ -81,3 +81,18 @@ pre:hover .copy { opacity: 1; }
 .chat .x { position: absolute; right: 6px; top: 8px; border: none; background: none; color: var(--muted); cursor: pointer; font-size: 14px; opacity: 0; padding: 0 4px; }
 .chat:hover .x { opacity: 1; } .chat .x:hover { color: var(--err); }
 .noChats { color: var(--muted); font-size: 12.5px; padding: 8px 10px; }
+
+#account { display: flex; align-items: center; gap: 8px; padding: 8px 4px 0; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+#accText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#accText.ok::before { content: "● "; color: var(--ok); } #accText.no::before { content: "○ "; color: var(--err); }
+#auth { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 10; }
+#auth[hidden] { display: none; }
+#auth .card { position: relative; width: min(460px, 92vw); background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 12px; }
+#auth h2 { margin: 0; font-size: 19px; } #auth p { margin: 0; color: var(--muted); } #auth p.hint { margin-top: 4px; }
+#auth .x { position: absolute; top: 10px; right: 12px; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; }
+#authChoose, #authWait { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+#auth .row { display: flex; gap: 8px; } #auth .row input { flex: 1; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font: inherit; font-family: var(--mono); font-size: 13px; }
+#auth .error { margin: 0; max-width: none; font-size: 13px; }
+.primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.primary:disabled { opacity: 0.5; cursor: default; }
+[hidden] { display: none !important; }

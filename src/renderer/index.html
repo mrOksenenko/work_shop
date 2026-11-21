@@ -13,6 +13,7 @@
     <div id="brand"><span>OKS Desk</span></div>
     <button id="newBtn" class="chip">＋ Новый чат</button>
     <div id="chatList"></div>
+    <div id="account"><span id="accText">…</span><button id="accBtn" class="chip" hidden></button></div>
   </aside>
   <div id="main">
   <header id="topbar">
@@ -47,6 +48,34 @@
     </div>
     <div id="status"></div>
   </footer>
+  </div>
+
+  <div id="auth" hidden>
+    <div class="card">
+      <button id="authClose" class="x" title="Закрыть">✕</button>
+      <h2>Вход в Claude</h2>
+      <div id="authChoose">
+        <p>Чтобы начать, войдите в аккаунт. Это нужно сделать один раз — вход откроется в браузере.</p>
+        <button id="loginSub" class="primary">Войти через подписку Claude</button>
+        <button id="loginApi" class="chip">Войти через Anthropic Console (оплата по API)</button>
+      </div>
+      <div id="authWait" hidden>
+        <p>Завершите вход в открывшемся браузере. Окно закроется само, когда всё получится.</p>
+        <p class="hint">Ссылка для входа (можно открыть в любом браузере):</p>
+        <div class="row">
+          <input id="authUrl" readonly placeholder="Ссылка появится через секунду…" spellcheck="false">
+          <button id="authCopy" class="chip">Копировать</button>
+        </div>
+        <button id="authOpen" class="chip">Открыть ссылку в браузере</button>
+        <p class="hint">Если браузер показал код, вставьте его сюда:</p>
+        <div class="row">
+          <input id="authCode" placeholder="Код из браузера" autocomplete="off" spellcheck="false">
+          <button id="authSend" class="primary">Отправить</button>
+        </div>
+        <button id="authCancel" class="chip">Отмена</button>
+      </div>
+      <div id="authErr" class="error" hidden></div>
+    </div>
   </div>
 
   <script src="../../node_modules/marked/lib/marked.umd.js"></script>

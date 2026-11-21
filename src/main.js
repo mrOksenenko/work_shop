@@ -1,5 +1,5 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-const { spawn, execFileSync } = require('child_process');
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
+const { spawn, execFile, execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -93,6 +93,11 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
+function cliEnv() {
+  const extra = ['/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin')];
+  return { ...process.env, PATH: [...extra, process.env.PATH || ''].join(':') };
+}
+
 function startProcess() {
   const bin = findClaude();
   if (!bin) {
@@ -111,8 +116,7 @@ function startProcess() {
   if (settings.model) args.push('--model', settings.model);
   if (sessionId) args.push('--resume', sessionId);
 
-  const extra = ['/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin')];
-  const env = { ...process.env, PATH: [...extra, process.env.PATH || ''].join(':') };
+  const env = cliEnv();
 
   stdoutBuf = '';
   stderrBuf = '';
@@ -175,6 +179,93 @@ function stopProcess() {
     proc = null;
   }
 }
+
+
+// ---------- вход в аккаунт (claude auth ...) ----------
+const stripAnsi = (t) => t.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
+
+function runCli(args, timeout = 20000) {
+  return new Promise((resolve) => {
+    const bin = findClaude();
+    if (!bin) return resolve({ ok: false, stdout: '', notFound: true });
+    execFile(bin, args, { env: cliEnv(), timeout }, (err, stdout, stderr) =>
+      resolve({ ok: !err, stdout: String(stdout || ''), stderr: String(stderr || '') })
+    );
+  });
+}
+
+async function authStatus() {
+  const r = await runCli(['auth', 'status']);
+  if (r.notFound) return { unknown: true, notFound: true };
+  try {
+    return JSON.parse(r.stdout); // при выходе из аккаунта код возврата ненулевой, но JSON есть
+  } catch {
+    return { unknown: true };
+  }
+}
+
+let loginProc = null;
+let loginCancelled = false;
+
+ipcMain.handle('auth:status', () => authStatus());
+
+ipcMain.handle('auth:login', (_e, method) => {
+  if (loginProc) return { ok: false, error: 'Вход уже выполняется' };
+  const bin = findClaude();
+  if (!bin) return { ok: false, error: 'Не найден claude CLI' };
+  const flag = method === 'console' ? '--console' : '--claudeai';
+  const child = spawn(bin, ['auth', 'login', flag], { env: cliEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
+  loginProc = child;
+  loginCancelled = false;
+  let buf = '';
+  let urlSent = false;
+  const onData = (d) => {
+    const t = stripAnsi(String(d));
+    buf += t;
+    send('auth:log', t);
+    if (!urlSent) {
+      const m = buf.match(/https:\/\/\S+(?=\s)/); // ждём конца строки, чтобы не взять обрезанную ссылку
+      if (m) {
+        urlSent = true;
+        send('auth:url', m[0]);
+      }
+    }
+  };
+  child.stdout.on('data', onData);
+  child.stderr.on('data', onData);
+  child.stdin.on('error', () => {});
+  child.on('error', (err) => {
+    if (loginProc === child) loginProc = null;
+    send('auth:done', { ok: false, error: err.message });
+  });
+  child.on('exit', async (code) => {
+    if (loginProc === child) loginProc = null;
+    const st = await authStatus();
+    const ok = st.loggedIn === true;
+    if (ok) stopProcess(); // следующий запуск claude подхватит новые учётные данные
+    send('auth:done', { ok, cancelled: loginCancelled, code, status: st, output: stripAnsi(buf).slice(-1500) });
+  });
+  return { ok: true };
+});
+
+ipcMain.handle('auth:code', (_e, code) => {
+  if (!loginProc || typeof code !== 'string') return false;
+  loginProc.stdin.write(code.trim() + '\n');
+  return true;
+});
+
+ipcMain.handle('auth:cancel', () => {
+  if (loginProc) {
+    loginCancelled = true;
+    loginProc.kill('SIGTERM');
+  }
+});
+
+ipcMain.handle('auth:logout', async () => {
+  stopProcess();
+  await runCli(['auth', 'logout']);
+  return authStatus();
+});
 
 ipcMain.handle('app:getState', () => ({
   settings,
@@ -289,6 +380,12 @@ ipcMain.handle('chats:delete', (_e, id) => {
   return true;
 });
 
+ipcMain.handle('app:copy', (_e, text) => {
+  if (typeof text !== 'string') return false;
+  clipboard.writeText(text.slice(0, 100000));
+  return true;
+});
+
 ipcMain.handle('app:openExternal', (_e, url) => {
   if (/^https?:\/\//.test(url)) shell.openExternal(url);
 });
@@ -301,6 +398,7 @@ function createWindow() {
     minWidth: 560,
     minHeight: 420,
     title: 'OKS Desk',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     backgroundColor: '#1a1a1d',
     webPreferences: {
@@ -325,6 +423,13 @@ function createWindow() {
 
 app.whenReady().then(() => {
   loadSettings();
+  if (process.platform === 'darwin' && app.dock) {
+    try {
+      app.dock.setIcon(path.join(__dirname, '..', 'build', 'icon.png'));
+    } catch (e) {
+      console.error('Не удалось поставить иконку в Dock', e);
+    }
+  }
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

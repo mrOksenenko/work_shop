@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34343d"/>
+      <stop offset="1" stop-color="#121216"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.52" r="0.5">
+      <stop offset="0" stop-color="#ff8f5a" stop-opacity="0.50"/>
+      <stop offset="1" stop-color="#ff8f5a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bubble" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#ffb07a"/>
+      <stop offset="0.55" stop-color="#ef7a4c"/>
+      <stop offset="1" stop-color="#cc5230"/>
+    </linearGradient>
+    <linearGradient id="bubbleShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="26" stdDeviation="30" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <clipPath id="squircle"><rect x="100" y="100" width="824" height="824" rx="190"/></clipPath>
+  </defs>
+
+  <!-- корпус иконки -->
+  <rect x="100" y="100" width="824" height="824" rx="190" fill="url(#bg)"/>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+    <ellipse cx="512" cy="540" rx="400" ry="360" fill="url(#glow)"/>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="188.5" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3"/>
+
+  <!-- облачко чата -->
+  <g filter="url(#shadow)">
+    <path id="b" d="M360 280 H664 A112 112 0 0 1 776 392 V540 A112 112 0 0 1 664 652 H476 L336 772 L362 652 A112 112 0 0 1 248 540 V392 A112 112 0 0 1 360 280 Z"
+          fill="url(#bubble)" stroke="url(#bubble)" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M360 280 H664 A112 112 0 0 1 776 392 V470 H248 V392 A112 112 0 0 1 360 280 Z" fill="url(#bubbleShine)"/>
+  </g>
+
+  <!-- «>_» — приглашение командной строки -->
+  <g fill="none" stroke="#1a1a1f" stroke-width="44" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="395,405 487,466 395,527"/>
+    <line x1="543" y1="535" x2="640" y2="535"/>
+  </g>
+</svg>

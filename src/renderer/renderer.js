@@ -148,7 +148,7 @@ function renderMarkdown(el, src) {
     btn.className = 'chip copy';
     btn.textContent = 'Копировать';
     btn.onclick = async () => {
-      await navigator.clipboard.writeText(pre.querySelector('code')?.innerText ?? pre.innerText);
+      await window.api.copy(pre.querySelector('code')?.innerText ?? pre.innerText);
       btn.textContent = 'Скопировано';
       setTimeout(() => (btn.textContent = 'Копировать'), 1200);
     };
@@ -410,17 +410,150 @@ function handleEvent(evt) {
       setBusy(false);
       if (evt.is_error) {
         const r = evt.result || 'Ошибка выполнения';
-        addError(/not logged in/i.test(r) ? `${r}\nВыполните в терминале: claude /login — и повторите.` : r);
+        if (/not logged in|please run \/login/i.test(r)) {
+          auth.loggedIn = false;
+          renderAccount();
+          const last = [...chat.items].reverse().find((i) => i.type === 'user');
+          pendingPrompt = last?.text ?? null;
+          chat.sessionId = null; // сессия не создана, resume по ней не сработает
+          window.api.setSession(null, chat.cwd);
+          addError('Вход не выполнен. Войдите в аккаунт — и повторите сообщение.');
+          showAuth();
+        } else {
+          addError(r);
+        }
       }
       const bits = [];
       if (evt.duration_ms) bits.push(`${(evt.duration_ms / 1000).toFixed(1)} с`);
-      if (evt.total_cost_usd) bits.push(`$${evt.total_cost_usd.toFixed(4)}`);
       setStatus(bits.join(' · '));
       persistNow();
       break;
     }
   }
 }
+
+
+// ---------- вход в аккаунт ----------
+let auth = { loggedIn: null, info: null }; // loggedIn: null = неизвестно
+let authUrl = null;
+let pendingPrompt = null; // сообщение, которое не ушло из-за отсутствия входа
+
+function accountLabel(info) {
+  return info?.email || info?.account?.email || info?.emailAddress || ({ claude_ai: 'Подписка Claude', console: 'Anthropic Console', oauth_token: 'Подписка Claude', api_key: 'API-ключ' })[info?.authMethod] || 'Вход выполнен';
+}
+
+function renderAccount() {
+  const t = $('accText');
+  const b = $('accBtn');
+  b.hidden = auth.loggedIn === null;
+  if (auth.loggedIn === true) {
+    t.className = 'ok';
+    t.textContent = accountLabel(auth.info);
+    b.textContent = 'Выйти';
+  } else if (auth.loggedIn === false) {
+    t.className = 'no';
+    t.textContent = 'Вход не выполнен';
+    b.textContent = 'Войти';
+  } else {
+    t.className = '';
+    t.textContent = '';
+  }
+}
+
+async function checkAuth() {
+  const st = await window.api.authStatus();
+  auth.info = st;
+  auth.loggedIn = st.unknown ? null : st.loggedIn === true;
+  renderAccount();
+  return auth.loggedIn;
+}
+
+function showAuth(err) {
+  $('auth').hidden = false;
+  $('authChoose').hidden = false;
+  $('authWait').hidden = true;
+  $('authErr').hidden = !err;
+  $('authErr').textContent = err || '';
+}
+
+function hideAuth() {
+  $('auth').hidden = true;
+}
+
+async function startLogin(method) {
+  authUrl = null;
+  $('authCode').value = '';
+  $('authErr').hidden = true;
+  const r = await window.api.authLogin(method);
+  if (!r.ok) return showAuth(r.error);
+  $('authChoose').hidden = true;
+  $('authWait').hidden = false;
+  $('authUrl').value = '';
+  $('authOpen').disabled = $('authCopy').disabled = true;
+}
+
+window.api.onAuthUrl((url) => {
+  authUrl = url;
+  $('authUrl').value = url;
+  $('authOpen').disabled = $('authCopy').disabled = false;
+});
+
+window.api.onAuthDone(async (r) => {
+  if (r.cancelled) return;
+  if (r.ok) {
+    auth.loggedIn = true;
+    auth.info = r.status;
+    renderAccount();
+    hideAuth();
+    setStatus('Вход выполнен');
+    if (pendingPrompt && !inputEl.value) {
+      inputEl.value = pendingPrompt; // возвращаем неотправленное сообщение, чтобы нажать Enter
+      autosize();
+    }
+    pendingPrompt = null;
+    inputEl.focus();
+  } else {
+    showAuth('Вход не завершён.' + (r.output ? '\n' + r.output.trim() : '') + (r.error ? '\n' + r.error : ''));
+  }
+});
+
+$('loginSub').onclick = () => startLogin('claudeai');
+$('loginApi').onclick = () => startLogin('console');
+$('authOpen').onclick = () => authUrl && window.api.openExternal(authUrl);
+$('authCopy').onclick = async () => {
+  if (!authUrl) return;
+  await window.api.copy(authUrl); // через main: navigator.clipboard в окне может быть заблокирован
+  $('authCopy').textContent = 'Скопировано ✓';
+  setTimeout(() => ($('authCopy').textContent = 'Копировать'), 1500);
+};
+$('authUrl').addEventListener('focus', (e) => e.target.select());
+$('authSend').onclick = async () => {
+  const code = $('authCode').value.trim();
+  if (code) {
+    await window.api.authCode(code);
+    $('authCode').value = '';
+  }
+};
+$('authCode').addEventListener('keydown', (e) => e.key === 'Enter' && $('authSend').click());
+$('authCancel').onclick = async () => {
+  await window.api.authCancel();
+  showAuth();
+};
+$('authClose').onclick = async () => {
+  await window.api.authCancel();
+  hideAuth();
+};
+$('accBtn').onclick = async () => {
+  if (auth.loggedIn) {
+    if (!confirm('Выйти из аккаунта Claude? История чатов в OKS Desk сохранится.')) return;
+    const st = await window.api.authLogout();
+    auth.info = st;
+    auth.loggedIn = st.unknown ? null : st.loggedIn === true;
+    renderAccount();
+  } else {
+    showAuth();
+  }
+};
 
 // ---------- ввод ----------
 function setBusy(b) {
@@ -433,6 +566,11 @@ function setBusy(b) {
 async function submit() {
   const text = inputEl.value.trim();
   if (!text || busy) return;
+  if (auth.loggedIn === false) {
+    pendingPrompt = text; // сообщение остаётся в поле, пока человек не войдёт
+    showAuth();
+    return;
+  }
   inputEl.value = '';
   autosize();
   pushItem({ type: 'user', text });
@@ -459,6 +597,7 @@ async function init() {
   renderChat();
   if (!state.claudePath) addError('Не найден claude CLI. Установите его (npm i -g @anthropic-ai/claude-code) и перезапустите приложение.');
   refreshList();
+  if (state.claudePath && (await checkAuth()) === false) showAuth();
 }
 
 $('folderBtn').onclick = async () => {
